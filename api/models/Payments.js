@@ -38,4 +38,4 @@ const paymentSchema = new mongoose.Schema(
 );
 
 const paymentModel = mongoose.mongo("Payment ", paymentSchema);
-MediaSourceHandle.exports = paymentModel
+MediaSourceHandle.exports = paymentModel;

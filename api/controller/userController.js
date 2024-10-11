@@ -1,7 +1,7 @@
 const expressAsyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
-
+const jwt = require("jsonwebtoken");
 const userController = {
   register: expressAsyncHandler(async (req, res) => {
     try {
@@ -16,7 +16,7 @@ const userController = {
         });
       }
 
-      const userExist = User.findOne({ email });
+      const userExist = await User.findOne({ email });
       if (userExist) {
         res.status(400).json({
           status: false,
@@ -37,7 +37,7 @@ const userController = {
       });
 
       // Set trial expiration date
-      newUser.trialActive = new Date(
+      newUser.trialExpire = new Date(
         new Date().getTime() + newUser.periodActive * 24 * 60 * 60 * 1000
       );
 
@@ -62,13 +62,60 @@ const userController = {
   }),
 
   login: expressAsyncHandler(async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
+    // ---- get email and password from user
+    const { email, password } = req.body;
+    // ---- check for if username and password is get or not
+    if (!email || !password) {
       res.status(400).json({
         message: "Username and Password is required ",
       });
     }
-    const cpr_password = User.compare(password);
+    // ---- check for email ----
+    const user = await User.findOne({ email });
+    // ----check for user----
+    if (!user) throw new Error("User not found");
+    //---- compare password
+    const cpr_password = await bcrypt.compare(password, user?.password);
+    // ---- if !compare----password ----
+    if (!cpr_password) throw new Error("Wrong  Password");
+    // generate token
+    const token = jwt.sign({ id: user?._id }, process.env.JWT_TOKEN, {
+      expiresIn: "3d",
+    });
+    // ---- send token to the cookies
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === "production",
+    });
+    // --- send the response
+    res.json({
+      status: "success",
+      _id: user?._id,
+      message: "Login Success",
+      email: user?.email,
+      username: user?.username,
+      token,
+    });
+  }),
+  logout: expressAsyncHandler(async (req, res) => {
+    // Clear the token cookie
+    res.clearCookie("token");
+    // Send a success response
+    res.status(200).json({ message: "Logout Successfully" });
+  }),
+  profile: expressAsyncHandler(async (req, res) => {
+    const id = req?.user;
+    console.log(id);
+
+    const userProfile = await User.findById(id).select("-password");
+    if (userProfile) {
+      res.status(200).json({
+        message: "Profile fetched",
+        userProfile,
+      });
+    }
   }),
 };
 

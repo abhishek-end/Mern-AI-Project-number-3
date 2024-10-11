@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
 
-const historySchema = new mongoose.Schema(
+const HistorySchema = new mongoose.Schema(
   {
     user: {
-      type: mongoose.Schema.Type.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
     content: {
@@ -16,5 +16,5 @@ const historySchema = new mongoose.Schema(
   }
 );
 
-const history = mongoose.mongo("Payment ", historySchema);
-module.exports = history;
+const History = mongoose.model("Payment ", HistorySchema);
+module.exports = History;
